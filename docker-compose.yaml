@@ -6,4 +6,4 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - OPENAI_API_KEY=sk-proj-v7JO5SsYBdTXdHWrKkIiT3BlbkFJZy7mG1RqzTj5tAhgLMGF
+      - OPENAI_API_KEY=

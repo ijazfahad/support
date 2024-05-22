@@ -1,0 +1,9 @@
+version: '3'
+
+services:
+  support-sftp-sso-app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - OPENAI_API_KEY=sk-proj-v7JO5SsYBdTXdHWrKkIiT3BlbkFJZy7mG1RqzTj5tAhgLMGF

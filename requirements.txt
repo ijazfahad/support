@@ -1,0 +1,9 @@
+flask
+openai
+langchain
+langchain_community
+chromadb
+tiktoken
+unstructured
+unstructured[docx]
+unstructured[csv]

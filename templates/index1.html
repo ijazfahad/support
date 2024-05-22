@@ -1,0 +1,38 @@
+<!-- templates/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatGPT Interface</title>
+</head>
+<body>
+<h1>Ask Qustions related to SFTP</h1>
+<form method="POST">
+    <label for="query">Enter your query:</label>
+    <input type="text" id="query" name="query" required>
+    <button type="submit">Submit</button>
+</form>
+<div id="response"></div>
+
+<script>
+    document.querySelector('form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const query = document.getElementById('query').value;
+        const responseDiv = document.getElementById('response');
+
+        const response = await fetch('http://localhost:8080', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ query })
+        });
+        console.log(response)
+
+        const result = await response.json();
+        responseDiv.innerHTML = `<p>${result.answer}</p>`;
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatGPT Interface</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+        }
+
+        .chat-container {
+            flex: 1;
+            padding: 20px;
+            max-width: 600px;
+            margin: 20px auto;
+            border-radius: 10px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .chat-header {
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .message-container {
+            flex-grow: 1;
+        }
+
+        .chat-item {
+            margin-bottom: 10px;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .user-message {
+            background-color: #e6f7ff;
+            text-align: right;
+        }
+
+        .bot-message {
+            background-color: #f0f0f0;
+            text-align: left;
+        }
+
+        .chat-form {
+            display: flex;
+            align-items: center;
+            padding: 20px;
+            background-color: #f4f4f4;
+            width: 100%;
+        }
+
+        .input-field {
+            flex-grow: 1;
+            /*margin-right: 10px;*/
+            /*max-width: 600px;*/
+            align-content: center;
+        }
+
+        .submit-btn {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+
+        .submit-btn:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+<div class="chat-container" id="chat-container">
+    <h1 class="chat-header">Ask Questions related to SFTP</h1>
+    <div id="response" class="message-container"></div>
+</div>
+
+<form class="chat-form" method="POST">
+    <input type="text" class="input-field" id="query" name="query" placeholder="Enter your query..." required>
+    <button type="button" class="submit-btn" id="submit-btn">Send</button>
+</form>
+
+<script>
+    const responseDiv = document.getElementById('response');
+    const submitBtn = document.getElementById('submit-btn');
+    const queryInput = document.getElementById('query');
+
+    function scrollToBottom() {
+        responseDiv.scrollTop = responseDiv.scrollHeight;
+    }
+
+    document.querySelector('form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await sendMessage();
+    });
+
+    submitBtn.addEventListener('click', async () => {
+        await sendMessage();
+    });
+
+    queryInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            submitBtn.click();
+        }
+    });
+
+    async function sendMessage() {
+        const query = queryInput.value;
+
+        if (!query.trim()) return;
+
+        responseDiv.innerHTML += `
+            <div class="chat-item user-message">
+                <p>${query}</p>
+            </div>
+        `;
+
+        const response = await fetch('http://localhost:8080', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ query })
+        });
+
+        const result = await response.json();
+        responseDiv.innerHTML += `
+            <div class="chat-item bot-message">
+                <p>${result.answer}</p>
+            </div>
+        `;
+        queryInput.value = '';
+        scrollToBottom();
+    }
+</script>
+</body>
+</html>

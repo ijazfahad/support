@@ -1,0 +1,729 @@
+﻿Synchronizing your data with GivePulse
+Last updated on 08/24/2023
+
+
+
+
+By uploading csv files to our secure FTP server, you can quickly import and synchronize your service learning courses, students, faculty and staff with GivePulse. We run a nightly job to update course rosters and import new courses, students and faculty. You can create the files manually or export them directly from Banner or any other software platform you are using. Data sent over in each of the files is a refresh of the new data, not the delta (or changes). 
+Set Up Information
+sFTP Data We Need from You - Generating a Public Key
+We use public/private key authentication for sFTP and need a public key to grant you access to your account. 
+
+
+Steps to generate an ssh key
+1. Open terminal (on a mac) or (git bash on windows) 
+2. run the following command
+        > ssh-keygen -t rsa -b 4096 -C "<your_email@school.edu>"
+3. When you're prompted to "Enter a file in which to save the key," type out the path that is there but replace the file name (id_rsa) with givepulse_id_rsa
+4. Do not enter a pass phrase. Just hit enter.
+5. Two files will be created: 
+         > givepulse_id_rsa - your private key
+         > givepulse_id_rsa.pub - your public key
+6. Send the public key to support@givepulse.com. We'll add it to our sftp server and you can now connect to it using your private key
+sFTP Variables We Will Provide You With
+   * IP Address or DNS 
+   * Port
+   * Username - Will most likely be your organization name
+
+
+Live vs Test Environments
+
+
+In your sFTP directory you will find two folders: Production and Test. Production will be synchronized with the main GivePulse site. Test will be synchronized with dev.givepulse.com. You must sync your information in the Test folder and review it on your dev site before syncing it on Production. When you place your files in Test folder, email support@givepulse.com and let them know so that they can begin syncing. Following that you can review your files in dev.
+
+
+Accessing Your Dev Site
+Accessing dev requires an additional username and password. For information on finding and accessing your dev site, please review this document.  
+
+
+Data Encryption
+GivePulse supports GNU Privacy Guard (GPG) Encryption. This information is published on the Open PGP Key Server under support@givepulse.com, and the fingerprint for our key is: 8524 5A99 5036 A5FD ABF1 4929 E74B D018 D77B A502 - You can download it from here as well: https://keys.openpgp.org/search?q=support%40givepulse.com.
+
+
+You can use our public key to encrypt your data before sending it.
+Uploading your data
+
+
+Command line or script - You can connect by running
+sftp -oPort=xxxxx  {subdomain}@sync.givepulse.com
+
+
+If you need to whitelist an IP for sync.givepulse.com, you can use one of the following:
+   * 3.220.245.96
+   * 52.223.3.13
+   * 35.71.172.193
+
+
+FileZilla or some other FTP client
+  
+
+Important Notes
+
+
+   1. Please use the exact file names and column header names. Any changes to the header or file names may result in that column/file being ignored.
+   2. Columns can be placed in any order and any optional column can be omitted from the csv if you do not need or use it.
+   3. File names must be the following: students.csv, instructors.csv, courses.csv, course_students.csv, course_instructors.csv, terms.csv and memberships.csv
+   4. Emails: An institution can have students, graduate students, student workers, staff, employees, faculty, alumni and other types of users with unique type of emails. In order to ensure GivePulse works smoothly, it’s very important that the emails sent in these files are the ones where the user will receive actual email and it should also match up to any SSO email that comes across to GivePulse. Please discuss this in the onboarding.
+   5. In the instance you want to add custom fields beyond what is not listed on here in the documentation, the labels should have a title with the format of CF_XXXX where XXXX is the GivePulse ID. Please ask the system administrator for GivePulse on your institution to create admin custom fields for the user. Learn more about proper custom field formatting here.
+   6. If you are using a delimiter other than “,”, please let us know.
+   7. Data Syncing Settings: under the More Tools > Data Syncing within your group, there are a number of settings designed to help you manage and audit your data integration with GivePulse. Here’s some important functionality included: 
+   1. Log files
+   2. Admin email frequency 
+   3. Setting up default admins for the courses
+   4. Course title formatting on the frontend of users
+   5. Student subgroup placement
+________________
+
+
+Files & File Structure
+students.csv file structure is as follows:
+Field Name,Required,Type,Max Length
+STUDENT_ID,Yes,Text,20
+FIRST_NAME,Yes,Text,60
+LAST_NAME,Yes,Text,60
+MIDDLE_NAME,No,Text,60
+PREFERRED_NAME,No,Text,60
+EMAIL,Yes,Text,150
+PHONE,No,Text,100
+ADDRESS1,No,Text,100
+ADDRESS2,No,Text,100
+CITY,No,Text,100
+STATE,No,Text,40
+ZIP,No,Text,15
+EMERGENCY_CONTACT,No,Text,80
+EMERGENCY_CONTACT_REL,No,Text,30
+EMERGENCY_CONTACT_PHONE,No,Text,100
+SSO_USERNAME,No,Text,80
+GENDER,No,Text,20
+DOB,No,Date,
+RACE,No,Text,15
+ETHNICITY,No,Text,255
+VETERAN,No,Boolean,1
+MAJOR_CODE,No,Text,255
+MAJOR_DESC,No,Text,255
+MAJOR_CODE_2,No,Text,255
+MAJOR_CODE_2_DESC,No,Text,255
+MINOR_CODE,No,Text,255
+MINOR_DESC,No,Text,255
+ADMIT_TERM_CODE,No,Text,50
+ADMIT_TERM_DESC,No,Text,80
+EXPECTED_GRADUATION,No,Date,
+EXPECTED_GRADUATION_TERM,No,Text,50
+COLLEGE,No,Text,255
+CURRENT_YEAR,No,Text,40
+CF_XXXX,No,,
+EMAIL2,No,Text,150
+
+-----
+
+Notes related to each field
+
+STUDENT_ID: For Student IDs that have trailing zeros: we recommend double checking and making sure the files are consistent when moved back over to GivePulse. Common issues occur when opening files in MS Excel and the zeros disappear
+PREFERRED_NAME: Preferred first name if different
+EXPECTED_GRADUATION: yyyy-mm-dd or just the year YYYY (will sync to Graduation Year in GP if just the year) - Maps to Graduation Date in the GivePulse UI
+EXPECTED_GRADUATION_TERM: Maps to Graduation Date in the GivePulse UI
+CURRENT_YEAR: Freshman, Sophomore, 2nd Year, etc
+CF_XXXX: Click here for instructions on custom field creation and formatting
+EMAIL2: If all of your users have two emails, you can send the second one here and it will be attached to their account. This will reduce duplicate user accounts from being created if they can log in via SSO with either email address
+EMERGENCY_CONTACT_REL: accepted values -> Parent|Mother|Father|Spouse|Partner|Fiancee|Sibling|Child|Son|Daughter|Stepfather|Stepmother|Grandparent|Uncle|Aunt|Cousin|Relative|Neighbor|Roommate|Friend|Mentor|Boyfriend|Girlfriend|Other|Unknown
+SSO_USERNAME: If the email address related to banner id and the email address related to sso account are different, in that case the SSO_USERNAME is required so we can link those two accounts together, otherwise it is not required
+GENDER: accepted values -> male|female|man|woman|agender|other|nonbinary|unknown|transgender|transman|transwoman
+RACE: accepted values -> [1|2|4|5|7|X] where 1 = White 2 = Black or African American 3 = Multiracial4 = Asian 5 = American Indian or Alaskan Native7 = Native Hawaiian or Pacific Islander X = Undisclosed You can pass in multiple options by separating them with a semicolon. e.g 2;4
+ETHNICITY: accepted values ->[1|2] where 1 = Not Hispanic or Latino 2 = Hispanic or Latino
+VETERAN:accepted values -> [B|V|O] where O = Yes N = NoB = Protected - choosing to not self-identify V = Not Protected
+
+
+
+	instructors.csv
+
+
+Field Name
+	Required
+	Type
+	Max Length
+	Notes
+	FIRST_NAME
+	Yes
+	Text
+	60
+	
+
+	LAST_NAME
+	Yes
+	Text
+	60
+	
+
+	FACULTY_ID
+	Yes
+	Text
+	11
+	In some institutions faculty might have either an additional ID or an altogether different one than students or staff.
+	EMAIL
+	Yes
+	Text
+	150
+	
+
+	SSO_USERNAME
+	No
+	Text
+	80
+	
+
+	PHONE
+	No
+	Text
+	100
+	
+
+	ADDRESS1
+	No
+	Text
+	100
+	
+
+	ADDRESS2
+	No
+	Text
+	100
+	
+
+	CITY
+	No
+	Text
+	100
+	
+
+	STATE
+	No
+	Text
+	40
+	
+
+	ZIP
+	No
+	Text
+	15
+	
+
+	EMERGENCY_CONTACT        
+	No
+	Text
+	80
+	
+
+	EMERGENCY_CONTACT_REL
+	No
+	Text
+	30
+	[Parent|Mother|Father|Spouse|Partner|Fiancee|Sibling|Child|Son|Daughter|Stepfather|Stepmother|Grandparent|Uncle|Aunt|Cousin|Relative|Neighbor|Roommate|Friend|Mentor|Boyfriend|Girlfriend|Other|Unknown]
+	EMERGENCY_CONTACT_PHONE
+	No
+	Text
+	100
+	
+
+	FACULTY_CODE
+	No
+	Text 
+	20
+	Role code
+	CODE_DESCRIPTION
+	No
+	Text
+	
+
+	Current role of user associated with school.
+
+
+Allowed values: "alumni", "alumni employee", "adjunct", "employee", "faculty", "faculty/staff", "staff", "student", "other"
+	TITLE
+	No
+	Text
+	100
+	Are they associate, tenured or some additional distinction.
+	CF_XXXX
+	No
+	
+
+	
+
+	Click here for instructions on custom field creation and formatting.
+	EMAIL2
+	No
+	Text
+	150
+	If all of your users have two emails, you can send the second one here and it will be attached to their account. This will reduce duplicate user accounts from being created if they can log in via SSO with either email address.
+	courses.csv
+
+
+Field Name
+	Required
+	Type
+	Max Length
+	Notes
+	CRN
+	Yes
+	Text
+	16
+	Unique value for the course. 
+	TERM 
+	Yes
+	Text
+	20
+	
+
+	SUBJ_CODE 
+	Yes
+	Text
+	16
+	MATH, ENG, or some other Code that represents the subject of the course.
+	CRSE_NUMB 
+	Yes
+	Text
+	16
+	
+
+	CRSE_TITLE
+	Yes
+	Text
+	120
+	Short title
+	CRSE_DESC
+	Yes
+	Text
+	150
+	Long description if title is not descriptive enough.
+
+
+	PARENT_GIVEPULSE_ID
+	No
+	Int
+	11
+	Group ID on GivePulse to nest these courses. You can export your subgroups by going to Manage > Network > Export Subgroups to find their IDs
+	SECTION
+	No
+	Text
+	20
+	
+
+	CROSS_LIST_CODE
+	No
+	Text
+	20
+	
+
+	DEPT_CODE or CRSE_DEPT_CODE
+	No
+	Text
+	20
+	e.g. Health Sciences
+
+
+	CRSE_DEPT_DESC
+	No
+	Text
+	50
+	e.g., College of Health Sciences
+	CRSE_COLL_CODE
+	No
+	Text
+	100
+	e.g., HS
+	CRSE_COLL_DESC
+	No
+	Text
+	512
+	
+
+	CLASS_TIME
+	No
+	Text
+	255
+	E.g MWF 9:00am - 10:30am
+
+Or any Text within character limit 
+	CLASS_TYPE
+	No
+	Text
+	20
+	-Traditional
+-Online
+-Study Abroad
+-Co-Op/Internship
+-Leadership Studies
+-Continuous Registration
+-Hybrid
+-Hyflex
+	CLASS_STATUS
+	No
+	Text
+	20
+	-Designated
+-Regularly Taught
+-Irregularly Taught
+-Optional
+-Required
+
+
+	SL_TYPE
+	No
+	Text
+	20
+	-Deliverable
+-Placement
+-Engaged Research
+-Project
+	GIVEPULSE_ORGANIZER_ID
+	No
+	Int
+	10
+	GivePulse unique ID of the user you want to make the organizer.
+
+
+	FACULTY_ID
+	No
+	Text
+	11
+	Add multiple faculty_id’s using the course_instructors.csv
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+Course Naming Convention
+Course Generation
+Course Primary Admins
+
+
+course_students.csv
+
+
+Field Name
+	Required
+	Type
+	Max Length
+	Notes
+	STUDENT_ID 
+	Yes*
+	Text
+	20
+	Required if email is missing
+	EMAIL
+	Yes*
+	Text
+	150
+	Required if student_id is missing
+	CRN
+	Yes
+	Text
+	16
+	
+
+	TERM
+	Yes
+	Text
+	20
+	
+
+	STATUS
+	No
+	Text
+	40
+	* currently only used if you are doing Experiential Learning.
+	
+
+
+
+
+
+course_instructors.csv
+
+
+Field Name
+	Required
+	Type
+	Max Length
+	Notes
+	FACULTY_ID 
+	Yes*
+	Text
+	20
+	Required if email is missing
+	EMAIL
+	Yes*
+	Text
+	150
+	Required if FACULTY_ID is missing
+	CRN
+	Yes
+	Text
+	16
+	
+
+	TERM
+	Yes
+	Text
+	20
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+Instructors
+terms.csv
+Field Name
+	Required
+	Type
+	Max Length
+	Notes
+	TERM 
+	Yes
+	Text
+	20
+	A unique identifier or code. E.g. 202103, FA2021
+	YEAR
+	Yes
+	Text
+	20
+	2021, 2020, etc
+	SEMESTER
+	Yes
+	Text
+	16
+	In GivePulse, courses are displayed in tabs by semester. The label will be the Semester - Year. Thus if you have multiple terms for the same semester and year, you will want to give them unique semester names so users can differentiate them.
+
+
+	START_DATE
+	No
+	Date
+	
+
+	YYYY-MM-DD
+	END_DATE
+	No
+	Date
+	
+
+	YYYY-MM-DD
+	
+
+
+* In GivePulse, courses are displayed in tabs by semester. The label will be the Semester - Year. Thus if you have multiple terms for the same semester and year, you will want to give them unique semester names so users can differentiate them.
+
+
+
+
+
+
+memberships.csv
+
+
+Field Name
+	Required
+	Type
+	Max Length
+	Notes
+	STUDENT_ID 
+	Yes
+	Text
+	20
+	(The student/faculty ID) 
+
+
+	GIVEPULSE_GROUP_ID
+	Yes
+	Text
+	20
+	(The ID of the subgroup in GivePulse (can be found by exporting all the subgroups csv file)
+	
+
+
+* Note that syncing memberships means that that is the only way to add/remove users to those subgroups. Users will not be able to request to join or leave the group via the UI.
+NOTE: In the case there are fields you may want to add for reporting purposes, please inform our team and we can work on custom mappings of those fields.
+                
+Additional Notes on File Structure
+Course Primary Administrator
+
+
+The primary administrator of a course is by default the primary administrator of your network (unless you’ve selected a “Course Parent Group” to place all the courses under via the Data Syncing Settings page. In that case, the primary administrator will by default be the organizer of that group). 
+
+
+You can change this behavior by the following two options: 
+   * Setting the FACULTY_ID or GIVEPULSE_ORGANIZER_ID in the courses.csv file on a course by course basis OR
+   * Setting the “Default Organizer ID” in the Data Syncing Settings via the GivePulse User Interface as shown below:
+  
+
+
+
+So who will be made the primary organizer of a given course?
+   1. If the FACULTY_ID or GIVEPULSE_ORGANIZER_ID is set in courses.csv then this person will be.
+   2. If not 1, then if the “Default Organizer ID” is set, they will be the primary organizer
+   3. If not 1 or 2, the Primary Organizer of the parent group where the courses are placed
+
+
+Instructors - Secondary Administrators
+
+
+Instructors are added as secondary administrators. You can have up to 3 course instructors (excluding the primary organizer). These are added through the course_instructors.csv file. 
+
+
+
+
+________________
+
+
+SSO Lookup
+
+
+For institutions that are using Single Sign-On (SSO) w/ GivePulse (Shibboleth or CAS) we support user data lookups when a new user logs in for the first time. We pre-populate the new user’s GivePulse profile with any data found in the student file or faculty and staff file. Additionally you can pass in their SSO username in the students/faculty files and we can do a lookup on that when they log in via SSO.
+
+
+
+
+________________
+
+
+________________
+Custom Field Syncing
+To include additional information about students and instructors, you can create custom fields. You can add as many additional columns for custom fields as you like. Custom fields column headers should be formatted as 'CF_XXXX' - where 'XXXX' is the custom field ID generated by GivePulse. 
+
+
+YOU MUST CREATE THE CUSTOM FIELD IN GIVEPULSE IN ORDER TO GET THE CUSTOM FIELD ID. If you are syncing fields to your dev environment first, be sure to create the custom fields in dev and use those IDs in your test files. When you are ready to sync files in production, you will need to recreate your custom fields and add the production custom field IDs to your files.
+
+
+Note that the fields you sync are locked in GivePulse and will only be updated via the syncing job.
+
+
+Please see the instructions below for how to properly create custom fields, retrieve the custom field ID, and update your files.
+Creating the Custom Field in GivePulse
+To create custom fields for your users (students/faculty), go to Customize > Users > Administrative Fields within your group dashboard.
+  
+
+Here, you can create all of your custom fields. If you're creating a field with multiple options, make sure the options you create in GivePulse match the options you have in your files.
+   
+Find Custom Field ID
+Once you've created the custom fields, you will now have to retrieve the custom field IDs. You can find the custom field IDs under More Tools > Custom Fields in your group dashboard.
+  
+
+Here, you can do a keyword search for the fields you created and find the IDs in the Field ID column.
+  
+
+Add Custom Field ID to Files
+Now that you have the custom field ID, you can update your files and format the column header CF_XXXX.
+  
+
+
+
+
+
+________________
+
+
+Course Generation
+
+
+Courses are uniquely identified by the TERM and CRN number. Those two fields are used to see if the course exists in GivePulse. If not found, that course will automatically be created and placed under the main GivePulse group, or under the optional parent group if PARENT_GIVEPULSE_ID is set. Note that the PARENT_GIVEPULSE_ID must correspond to a GivePulse group in your network. You can also set a default group location by setting the Course Parent in the Ftp Syncing settings via the GivePulse UI
+
+
+
+
+Course Updates
+If you want an existing course description to be updated during a sync, you must set it to “_” in GivePulse so that we know it should be updated.
+
+
+
+
+________________
+
+
+Course Naming Convention
+
+
+Courses are by default named with the following format:
+
+
+{CRSE_TITLE} ({CRSE_NUMB}) [- Section {SECTION}]
+
+
+If SECTION is not sent to us, then  [- Section {SECTION}] will not be included.
+
+
+You can customize how titles will be generated on your data syncing settings page by navigating to your group > manage > resources > data syncing (note you must be a top level admin)
+
+
+Available attributes for generating course names are:
+
+
+{CRSE_TITLE} {CRN} {SUBJ_CODE} {CRSE_NUMB} {TERM} {DEPT_CODE} {SECTION} and {FACULTY_NAME}
+
+
+
+
+
+
+________________
+
+
+Deleting Data
+
+
+We do not automatically delete courses or students or instructors from the system.
+
+
+For example, if a student/instructor/course record is delivered one week but not the next, the record will remain in the database, untouched! It simply means you are no longer syncing that data.
+
+
+You may choose to archive users in the system (which will hide them) if you no longer want them active and you can reach out to support (support@givepulse.com) if you need any courses physically removed from the system.
+
+
+________________
+
+
+Synchronizing Course Students and Faculty
+
+
+Note that we only process a course roster if
+   1. The course is listed in the course file and
+   2. The course is not marked as completed in GivePulse.
+
+
+For each course found in the courses.csv file that is not marked as completed in GivePulse, all of the students and faculty are grabbed from the course_students.csv and course_instructors.csv files and linked to that course. Any person found in GivePulse that is linked to the course and not in those two files are removed.
+
+
+________________
+
+
+
+
+Additional Resources
+   * https://support.givepulse.com/hc/en-us/articles/360036006533-Course-Management-Public-View-Look-Feel
+   * https://support.givepulse.com/hc/en-us/articles/215732897-Service-Learning-Course-Types
+   * https://support.givepulse.com/hc/en-us/articles/206849157-Service-Learning
+
+
+
+
+Revisions
+   * 5/27/2021 - Course CRN lengths updated from 16 to 50
+   * 6/4/2021 - Student Minor field lengths updated to 255
+   * 8/10/201 - Increased term field lengths from 10 or 20 to 50
+   * 8/24/2023 - Adding support for Email2 column in student and instructor files
+GivePulse Inc |  support@givepulse.com | Austin, TX | Page

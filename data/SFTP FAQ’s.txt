@@ -1,0 +1,352 @@
+﻿Main SFTP Process
+
+
+How does the SFTP process actually run nightly and create data on our end?
+
+
+Most of the schools sync all files which include students.csv, instructors.csv, courses.csv, course_students.csv, course_instructors.csv...when that happens, the files are synced in this order:
+
+
+1. Terms.csv
+2. Students.csv
+3. Instructors.csv
+4. Courses.csv
+5. Course_students.csv
+6. Course_instructors.csv
+
+
+
+
+Terms.csv --- what actually happens?
+When we run the full sync, the first file that is processed in the terms.csv.
+We look through the headers and see if the required headers are present or not. The following are the correct headers for terms.csv
+'term' , 'year', 'semester', 'start_date', 'end_date' 
+
+
+If the required headers are not present in the file, we log an error message.
+
+
+Then we get all the terms present in the system for that school, if the term in the file is not present in the database, we add that term to our system.
+
+
+If the term is present in the system, we compare the term in the file with the term present in the system and update the term’s fields in our system.
+
+
+Note: Very few problems in sftp occur because of terms, the only time error occurs because of terms  is when a course is being created and in the courses.csv, the term for the course is listed incorrectly. Which results in the course not being created in the system. The solution is usually fixing the term in either terms.csv or course.csv
+
+
+
+
+
+
+
+
+
+
+Students.csv --- what actually happens?
+If students.csv is not empty, the first thing we do is get existing lookups data. (lookups is a table in our database where student data is stored for sftp)
+
+
+Then we check the subgroup placement settings of that group. If it is set then we get all the members of that subgroup first.
+  
+
+
+
+ -- After that, we iterate through all the student records in student.csv
+
+
+First thing we check in students.csv is what headers they are sending us in the file. We update what new headers are being sent to us.
+
+
+Then we compare those headers with the headers that are required for a successful sync.  
+
+
+If required headers are not present then the sync results in error.
+
+
+-- While checking the headers, we check the custom field headers as well. We check if that custom field is actually present in the network or not, if not we log an error message.
+
+
+
+
+-- After headers we start going through each individual row of student.csv. First thing we check is the student_id (student_id in our UI is external_id) column. If the row doesn’t have a value then this would result in an error and we will skip the rest of the row and move on to the next one.
+
+
+
+
+ -- If the student_id is present then we look at the email column for that row and check the value.
+If email isn’t present, that usually means an error too but for some schools like “udem” we imported emails separately for in their case it’s ok if email isn’t present. 
+
+
+In udems case, we use student_id and do a query to see if they already have a user with that student_id and if it has an email address in our database already. If they don’t, we log an error and skip over to the next row
+
+
+-- After checking email we go back to the lookups table and modify it.
+Basically we find the record of student in lookups table that we loaded earlier and search for the student using student_id (external_id)
+
+
+If the record is found then we go through the following headers and their values in students.csv, get the values, and update the lookup record in our database with the new values found in students.csv
+
+
+'Student_id' 'first_name' 'last_name' 'middle_name' 'preferred_name' 'email' 'email2' 'sso_username' 'gender' 'dob' 'race' 'ethnicity' 'veteran' 'major_code' 'major_desc' 'major_code_2' 'major_code_2_desc' 'minor_code' 'minor_desc' 'college' 'admit_term_code'  'admit_term_desc'  'expected_graduation'  'expected_graduation_term'  'current_year' 'address1' 'address2' 'city' 'state' 'zip' 'phone' 'emergency_contact' 'emergency_contact_rel' 'emergency_contact_phone' 
+
+
+If no lookup is found then we just create a new lookup and save that in our system for later use.
+
+
+NOTE: “Lookups” table is not the same as the “Users” table. Lookups table is specifically used for sftp and for efficient performance while syncing data. Users table is the main table where all the users data is stored. When we audit a user, the data comes from the User's table. 
+Basically, Look up data is combination User table and Education Table
+
+
+-- After saving the lookups table, we look for the user record in the database using email address.
+ If user isn’t found using email, we look for the student using external_id(student_id)
+ 
+
+
+
+
+---  if the user doesn’t exist, the first thing we check is “create all users “ in data syncing settings. If it is set to “yes” then we create a new user otherwise we don’t. (well we do if we find the same user in course_students.csv) 
+  
+
+
+
+
+
+
+
+The above is one of the many reasons why we have a separate lookups table and users table
+
+
+If the “create all users”  settings is set to no, then we only create users that are present in the course_students.csv and course_instructors.csv 
+
+
+If the create all users is set to yes ->
+1.  we create the new user from the lookups table that we just saved.
+2.  we create a membership record for the student for the school
+
+
+--- if the user already exists, we just update the user fields using lookups table and if the user already doesn’t have a membership with the school, we create a membership for the user.
+
+
+---- After the user is successfully updated or created, we move onto the custom field part of the students.csv file.
+
+
+If the value is correct for the custom field, we save the custom field value for the user. 
+If the value is left empty in the file, we check if there is an existing custom field value present for this user, if there is, we clean out that custom field value.
+
+
+-- After custom fields, we come to the “education” record of the user. 
+Education record is stored in our “educations” table in the database
+
+If the user is saved correctly, we look for user’s education record using user’s id and school’s id
+
+
+(just a side note:
+Every group that  is synced through sftp, a school record is created in our database.
+
+
+We differentiate between two education records using the school id because two different schools can have the same external id for a student and we wanna differentiate between students from two different schools.)
+
+
+If the education record is present, we just update the education record, otherwise we create a new record for the user. The following fields are saved in the education record.
+
+
+Role(like student/faculty etc), Currently Enrolled, major code, major description, major code 2, major code 2 description, minor code, minor description, graduation term, graduation date, graduation year, current year, term(admit) code, term description (admit), and college
+
+
+NOTE:
+ A lot of errors happen because of the discrepancy between what is in education record and what’s in the sftp files, if somehow the education record doesn’t have the correct student_id in the system, then the rosters might not sync correctly causing some student/instructor to not appear correctly in the system.
+ All the fields in education record, if they are not appearing correctly in the UI, we should first check the column name and make sure they are named correctly. Otherwise they won’t get saved correctly in the system and won’t appear in the UI
+
+
+
+
+
+
+After the education record is saved correctly, we check if the admin has set subgroups to which students should be added, if they have, we make students the member of those subgroups.
+
+
+
+
+Instructors.csv --- what actually happens?
+
+
+Basically the exact same as student.csv, just replace the word student with faculty and student_id with faculty_id
+
+
+Courses.csv --- what actually happens?
+The first thing we check while syncing the course file, we check if the terms files and the terms are loaded correctly. If there are no terms in the systems, the course syncing will definitely have bugs. So basically everything that happened in terms syncing happens again if we run sync just for courses. (If we run full sync then this process is not repeated)
+
+
+After terms are successfully synced, we come to courses.csv file
+
+
+First we load all the existing courses in our system. 
+
+After that we go through all the headers of the file and check if any required column header is missing or not. If it is missing then we log the error.
+
+
+Then we go through the actual values under those column, if CRN or Term is missing, we log the error
+
+
+After that we check the setting delete courses
+
+
+
+
+  
+
+
+
+If it is set to yes, then  we check the existing courses and courses found in courses.csv file, if some course is present in the system and not in the file, then we delete that course. 
+If the setting is set to no then we don’t care if the course is not in the file.
+
+
+Note: we ignore courses that were created manually, the above is only true for the courses created through sftp
+
+
+
+
+
+
+
+
+
+
+
+
+After that we check if “parent_givepulse_id” is set, if it is not set, we check if the setting course parent group is set. If the setting has value other than the main group which is running sync, we set that group as course parent group
+  
+
+After that we check if the group that they set is not a merged group, if it is we check if the merged group has the same top group as the syncing group if they are different, we log the error.
+
+
+Next we set the course’s organizer id. Organizer id can depend on many things.
+If “givepulse_organizer_id” is set then we make that user the organizer of that course.
+
+
+If the “givepulse_organizer_id” is not set then we check if “faculty_id” is set. If it is, we try to look for the user’s email  from the “lookups” table. 
+
+
+Then from email we try to get the user from the users table, if we can't find the user by email, we try to find the user through student_id. If we can’t find a user using student_id either, and the user was found in lookups, we create a new user in our system using lookup data, create a new education record, set the user role as faculty and  make that user the organizer of that course.
+
+
+If both “givepulse_organizer_id” and “faculty_id” are not set then we set the top group’s organizer as course’s organizer
+
+
+After the organizer is set, we check if the term set for the course is in the terms we loaded at the very beginning of the course sync job. If the term is not present we log and error and skip that row. If the title is not present, we log and error and skip to the next row as well.
+
+
+Next we check if this course exists in the courses we loaded earlier, if it doesn’t, we create a new course. 
+
+
+If it is present, we set an update course flag and update the course.
+
+
+If we are creating a new course, then first we check if the course title formatting is set.  
+
+
+If it is not, then the default course title looks like this “{Course title} {CRSE_NUMB} - {SECTION}”
+
+
+{faculty name} is found the same way the organizer is set for a course.
+
+
+Next we set all the rest of values for a course, we get most of these from the parent group of the course if they are not set in the file
+
+
+By default we also set membership approval to this course to “yes”.
+
+
+We log that the course was created and move to the next row. 
+
+
+-- if the update flag is set, then we update the fields for the course.
+
+
+If the “parent_givepulse_id” is different from the previous value, we move the course under the correct parent.
+
+
+We update all the course fields, including image, address, organizer, title formatting etc.
+
+
+After that, We update all the memberships under the correct parent group.
+
+
+If they are an ELT group, we create an ELT group for them. 
+
+
+-- After that we check all the custom fields, if the custom fields exist in the same network and save the values for those fields in our system. 
+
+
+
+
+
+
+course_instructors/students.csv --- what actually happens?
+Before we sync course_instructors or courses_students, we load terms and courses first.
+A lot of bugs are related to these files, which are due to the fact that the term or course crn listed incorrectly in either of these 4 files. So if we run into a problem where a student isn’t being synced, we should check all the files and make sure students have the correct external_id set as well.
+
+
+
+
+First we check the columns and make sure all the columns are present and all the required columns are named correctly.
+
+
+After that we move onto the data in the file, if there is no value in the email column, we skip that row and move on to the next row. If the email is present then we check the lookup table and see if there is a lookup record. If the lookup record is not found based on email, we try to find the lookup record using external_id(student_id) 
+
+
+If we still can’t find the lookup, we log an error and move to the next row.
+
+
+If we find the lookup record, we find the user from the email from lookup. If the user doesn’t exist, we create a new user and make them a member or admin of that course.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SFTP FAQ’s
+
+
+1. What is SFTP?
+2. Why SFTP?
+3. What is an alternative?
+4. What do we use it for?
+
+
+
+
+
+
+
+
+Common SFTP Issues: 
+
+
+1. Student missing from courses
+   1. Check SFTP student file
+   2. Example: https://givepulse.zendesk.com/agent/tickets/21925
+2. Instructors showing under the “organizer column”
+   1. Change the Organizer id under data Syncing > Settings
+3. University asking to move the parent group for courses
+   1. Under data sync settings, change the Course Parent Group setting
+   2. https://givepulse.zendesk.com/agent/tickets/21940
+4. Duplicate courses
+   1. Check SFTP file
+5. User not being able to test in Dev
+   1. Send documentation 
+   2. Make sure SSO is activated
+   3. Or add them as an admin 
+6. Test file sending No/Yes instead of 0/1 for drop down CF
+   1. Example: https://givepulse.zendesk.com/agent/tickets/22323
+7. Which fields are locked if they have been synced?
+   1. All education records, custom fields are locked
